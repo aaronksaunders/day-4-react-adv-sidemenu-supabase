@@ -13,12 +13,32 @@ import { useHistory } from "react-router";
 import "./Page.css";
 
 import { supabase } from "../store/supabase";
+import { useEffect, useState } from "react";
 
 const HomePage: React.FC = () => {
   const history = useHistory();
+  const [userProfile, setUserProfile] = useState<any>({});
 
   // used to render platform specific alerts
   const [present] = useIonAlert();
+
+  // get user profile information
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      const userId = supabase.auth.user()?.id;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select()
+        .eq("id", userId);
+
+      // get the user data
+      setUserProfile(data !== null ? data[0] : null);
+    };
+
+    console.log("get user profile information...");
+    loadUserProfile();
+  }, []);
 
   const doLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -53,7 +73,7 @@ const HomePage: React.FC = () => {
 
         {/* use supabase auth api to get current user, and
          render the json response */}
-        <pre>{JSON.stringify(supabase.auth.user(), null, 2)}</pre>
+        <pre>{JSON.stringify(userProfile, null, 2)}</pre>
 
         <IonButton onClick={() => doLogout()}>SIGN OUT</IonButton>
       </IonContent>

@@ -1,4 +1,9 @@
-import { IonApp, IonRouterOutlet, IonSplitPane } from "@ionic/react";
+import {
+  IonApp,
+  IonLoading,
+  IonRouterOutlet,
+  IonSplitPane,
+} from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Redirect, Route } from "react-router-dom";
 import Menu from "./components/Menu";
@@ -30,17 +35,27 @@ import { useEffect, useState } from "react";
 import { supabase } from "./store/supabase";
 
 const App: React.FC = () => {
+  const [loading, setLoading] = useState<any>(true);
   const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     setSession(supabase.auth.session());
+    setLoading(false);
 
     supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
-    console.log("session", session);
+    console.log("session", supabase.auth.session());
   }, []);
+
+  // if we have't checked for session yet, then display loading screen
+  if (loading)
+    return (
+      <IonApp>
+        <IonLoading isOpen={loading} />
+      </IonApp>
+    );
 
   return (
     <IonApp>
@@ -49,22 +64,18 @@ const App: React.FC = () => {
           <Menu />
           <IonRouterOutlet id="main">
             <Route path="/" exact={true}>
-              <Redirect to="/auth/login" />
-            </Route>
-            <Route path="/page/:name" exact={true}>
-              <Page />
-            </Route>
-            <Route path="/home" exact={true}>
-              <HomePage />
-            </Route>
-            <Route path="/detail" exact={true}>
-              <DetailPage />
+              <Redirect to="/home" />
             </Route>
 
+            {/* PRIVATE ROUTES */}
+            <PrivateRoute path="/page/:name" exact={true} component={Page} />
+            <PrivateRoute path="/home" exact={true} component={HomePage} />
+            <PrivateRoute path="/detail" exact={true} component={DetailPage} />
+
+            {/* PUBLIC ROUTES */}
             <Route path="/auth/login" exact={true}>
               <LoginPage />
             </Route>
-
             <Route path="/auth/create-account" exact={true}>
               <CreateAccountPage />
             </Route>
@@ -76,3 +87,22 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+/**
+ *
+ * @param param0
+ * @returns
+ */
+const PrivateRoute = ({ component: Component, ...rest }: any) => {
+  // auth.session to get the current user's auth state
+  const isAuth = supabase.auth.session() !== null;
+
+  return (
+    <Route
+      {...rest}
+      render={(props) =>
+        isAuth ? <Component {...props} /> : <Redirect to="/auth/login" />
+      }
+    />
+  );
+};
